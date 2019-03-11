@@ -80,8 +80,33 @@ Activity通过bindService(Intent service，ServiceConnection conn，int flags)�
 - 系统广播监听Service状态
 - 将APK安装到/system/app，变身为系统级应用
 
+### Handler, Looper, Message
+
+一个handler持有一个消息队列的引用和它构造时所属线程的Looper的引用.
+也就是说,一个handler必定有它对应的消息队列和Looper,
+一个线程至多能有一个Looper,也就至多能有一个消息队列.
+一个线程中可以有多个handler.
+
+在主线程中new了handler对象后,这个handler对象自动和主线程自动生成的Looper以及消息队列关联上了.
+子线程中拿到主线程中handler的引用,发送消息后,消息对象就会发送到target属性对应的那个handler对应的消息队列中去,由对应的Looper来取出处理(子线程msg–>主线程handler–>主线程messageQueue–>主线程Looper—>主线程Handler的handMessage).
+而消息发送到主线程handler,那么也就是发送到主线程的消息队列,用主线程中的Looper轮询.
+
+##### 为什么要用 Handler
+
+因为安卓更新ui只能在主线程中执行(只是大多数的时候出于安全方面的考虑，我们经常在主线程更新 ui)，而在实际情况中经常要在子线程访问UI。为什么系统不允许子线程访问UI呢，因为AndroidUI不是线程安全的，如果在多线程操控UI可能会导致UI控件处于不可预知的状态；那为什么系统不给UI控件的访问加锁呢？首先上锁机制会让UI访问的逻辑变得复杂，其次加锁机制会降低访问效率。因此，安卓之所以提供Handler是为了解决在子线程不能更新UI的矛盾。
+
+##### 对于Message Queue:
+指的是消息队列，，即存放供handler处理的消息。MessageQueue主要包括两个操作:插入和读取。读取本身会伴随删除操作。虽然名字叫队列，但其实内部实现是通过单链表的形式实现的（单链表在插入和删除上比较有优势，不是连续存储）。
+
+##### 对于Looper:
+Looper在消息机制中进行消息循环，像一个泵，不断地从MessageQueue中查看是否有新消息并提取，交给handler处理。Handler机制一定要Looper,在线程中通过Looper.prepare()为当前线程创建一个Looper,并使用Looper.loop()来开启消息的读取。为什么在平常Activity主线程使用时没有使用到Looper呢？因为对于主线程(UI线程)，会自动创建一个Looper 驱动消息队列获取消息，所以Looper可以通过getMainLooper获取到主线程的Looper。
+
+通过quit/quitSafely可以退出Looper,区别在于quit会直接退出，quitSafely会把消息队列已有的消息处理完毕后才退出Looper。
+
+##### 对于Handler
+Handler可以发送和接收消息。例如使用sendMessage就可以发送向消息队列插入一条消息，MessageQueue的next()方法就将消息返回给Looper，Looper收到消息后交由Handler处理，调用handMessage处理消息。
 
 
 ### Android 中用到的设计模式
 
-
+Application 是单例模式
